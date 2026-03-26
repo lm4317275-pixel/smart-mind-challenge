@@ -639,5 +639,14 @@ document.addEventListener("visibilitychange", () => {
 
 bestText.textContent = getBestScore();
 </script>
+  <script src="https://html5.api.gamedistribution.com/main.min.js"></script>
+<script>
+window.GD_OPTIONS = {
+    gameId: "7f60c6d0f12c4e4fbe95da4639931ffc",
+    onEvent: function(event) {
+        console.log(event.name);
+    }
+};
+</script>
 </body>
 </html>
