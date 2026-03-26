@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Smart Mind Challenge</title>
+<meta name="description" content="A polished HTML5 brain quiz game with timer, sound effects, and gentle background music." />
+<style>
+:root{
+  --bg1:#5b4bff; --bg2:#00c2ff; --bg3:#8a5cff; --card:#ffffff;
+  --text:#1a1d2b; --muted:#697089; --accent:#ffb703; --accent2:#ff5f6d;
+  --good:#17b26a; --bad:#ef4444; --soft:#eef2ff; --shadow:0 18px 45px rgba(19,25,61,.25);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{
+  margin:0;font-family:Arial,Helvetica,sans-serif;color:#fff;
+  background:
+    radial-gradient(circle at 15% 20%, rgba(255,255,255,.22), transparent 18%),
+    radial-gradient(circle at 85% 15%, rgba(255,255,255,.14), transparent 16%),
+    radial-gradient(circle at 80% 80%, rgba(255,255,255,.12), transparent 20%),
+    linear-gradient(135deg,var(--bg1),var(--bg2),var(--bg3));
+  overflow:hidden;
+}
+.bg-dot{position:fixed;border-radius:50%;background:rgba(255,255,255,.10);animation:float 10s ease-in-out infinite}
+.d1{width:120px;height:120px;left:3%;top:8%}
+.d2{width:76px;height:76px;right:8%;top:10%;animation-duration:12s}
+.d3{width:160px;height:160px;left:78%;bottom:8%;animation-duration:14s}
+.d4{width:95px;height:95px;left:18%;bottom:8%;animation-duration:11s}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-18px)}}
+
+#app{min-height:100%;display:flex;align-items:center;justify-content:center;padding:18px}
+.shell{
+  width:min(100%, 470px);min-height:min(94vh, 900px);background:rgba(255,255,255,.16);
+  border:1px solid rgba(255,255,255,.18);backdrop-filter:blur(12px);border-radius:34px;
+  box-shadow:var(--shadow);padding:14px;display:flex;flex-direction:column;
+}
+.topbar{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px}
+.chip{
+  background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.18);border-radius:999px;
+  padding:8px 12px;font-size:13px;font-weight:800;color:#fff;
+}
+.screen{
+  display:none;flex:1;background:linear-gradient(180deg, rgba(255,255,255,.98), rgba(247,249,255,.96));
+  color:var(--text);border-radius:28px;padding:22px;overflow:hidden;position:relative;
+}
+.screen.active{display:flex;flex-direction:column;animation:screenIn .35s ease}
+@keyframes screenIn{from{opacity:0;transform:translateY(10px) scale(.985)}to{opacity:1;transform:none}}
+
+.hero{text-align:center;margin:auto 0}
+.badge{
+  display:inline-block;padding:8px 14px;border-radius:999px;background:linear-gradient(90deg,#ffe082,#ffb703);
+  color:#5b3b00;font-size:13px;font-weight:900;letter-spacing:.4px;box-shadow:0 8px 22px rgba(255,183,3,.35);margin-bottom:14px;
+}
+.hero h1{margin:0 0 10px;line-height:1.02;font-size:36px}
+.hero p{color:var(--muted);line-height:1.65;font-size:16px;margin:0 auto 18px;max-width:330px}
+.hero-emoji{font-size:58px;margin-bottom:6px;animation:bob 1.8s ease-in-out infinite}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+
+.level-grid{display:grid;gap:12px;margin:18px 0}
+.level-btn,.main-btn,.secondary-btn,.option-btn{
+  border:none;border-radius:18px;font-size:16px;font-weight:800;cursor:pointer;transition:.18s ease;
+}
+.level-btn:hover,.main-btn:hover,.secondary-btn:hover,.option-btn:hover{transform:translateY(-1px)}
+.level-btn{
+  background:#fff;color:var(--text);text-align:left;padding:16px;box-shadow:0 10px 24px rgba(34,46,98,.08);
+  border:2px solid transparent;
+}
+.level-btn small{display:block;color:var(--muted);margin-top:4px;font-weight:700}
+.level-btn.selected{border-color:#6a5cff;box-shadow:0 14px 30px rgba(91,75,255,.17)}
+.actions{display:grid;gap:10px}
+.main-btn{
+  padding:16px 18px;color:#fff;background:linear-gradient(90deg,#6a5cff,#2f9bff);
+  box-shadow:0 14px 30px rgba(63,116,255,.28);
+}
+.secondary-btn{padding:14px 16px;color:#33405b;background:var(--soft)}
+
+.game-head{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:start;margin-bottom:12px}
+.title-line{color:var(--muted);font-size:14px;font-weight:800;margin-bottom:8px}
+.progress-wrap{height:12px;border-radius:999px;background:#e7ebff;overflow:hidden}
+.progress-bar{
+  height:100%;width:0%;background:linear-gradient(90deg,#00c853,#ffb703,#ff5f6d);transition:width .3s ease;
+}
+.timer-card{
+  min-width:92px;background:#11182d;color:#fff;border-radius:20px;padding:14px 12px;text-align:center;
+  box-shadow:0 10px 26px rgba(17,24,45,.20);
+}
+.timer-label{font-size:11px;opacity:.8;text-transform:uppercase;letter-spacing:.7px}
+.timer-num{font-size:29px;line-height:1.05;font-weight:900}
+.timer-card.warning{animation:pulse .8s infinite}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
+
+.stats-row{
+  display:flex;justify-content:space-between;gap:10px;margin-top:12px;color:var(--muted);font-size:14px;font-weight:800;
+}
+.question-card{
+  background:#fff;border-radius:22px;box-shadow:0 12px 28px rgba(34,46,98,.08);padding:18px;margin:10px 0 14px;min-height:148px;display:flex;align-items:center;
+}
+.question-text{width:100%;font-size:27px;line-height:1.35;font-weight:900}
+.options{display:grid;gap:12px}
+.option-btn{text-align:left;padding:16px 18px;background:#f5f7ff;color:#1c2340;box-shadow:0 8px 20px rgba(34,46,98,.06)}
+.option-btn.correct{background:rgba(23,178,106,.12);color:#0a6a3c;outline:2px solid rgba(23,178,106,.30)}
+.option-btn.wrong{background:rgba(239,68,68,.10);color:#8c2020;outline:2px solid rgba(239,68,68,.25)}
+.option-btn:disabled{cursor:default}
+.toast{
+  position:absolute;top:18px;left:50%;transform:translateX(-50%);background:#11182d;color:#fff;padding:10px 14px;
+  border-radius:999px;font-size:13px;font-weight:900;opacity:0;pointer-events:none;transition:.25s ease;
+}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.result{text-align:center;margin:auto 0}
+.trophy{font-size:72px;margin-bottom:8px;animation:bob 1.8s ease-in-out infinite}
+.score-big{font-size:52px;line-height:1;color:#1f2855;font-weight:900;margin:8px 0}
+.result p{color:var(--muted);line-height:1.7;margin:12px 0 20px}
+.pill-row{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;margin-bottom:18px}
+.pill{background:#edf1ff;color:#37405f;border-radius:999px;padding:10px 14px;font-size:14px;font-weight:800}
+.confetti{position:absolute;width:10px;height:18px;top:-20px;border-radius:4px;animation:drop linear forwards}
+@keyframes drop{to{transform:translateY(110vh) rotate(680deg);opacity:1}}
+
+@media (max-width:520px){
+  .shell{width:100%;min-height:100vh;border-radius:0;padding:12px}
+  .screen{padding:18px;border-radius:22px}
+  .hero h1{font-size:31px}
+  .question-text{font-size:23px}
+}
+</style>
+</head>
+<body>
+<div class="bg-dot d1"></div>
+<div class="bg-dot d2"></div>
+<div class="bg-dot d3"></div>
+<div class="bg-dot d4"></div>
+
+<div id="app">
+  <div class="shell">
+    <div class="topbar">
+      <div class="chip">🌍 Global Audience</div>
+      <div class="chip">🎵 Calm Music</div>
+    </div>
+
+    <section id="startScreen" class="screen active">
+      <div class="hero">
+        <div class="hero-emoji">🧠</div>
+        <div class="badge">SMART • FUN • FAST</div>
+        <h1>Smart Mind<br>Challenge</h1>
+        <p>Pick a difficulty, beat the timer, build combos, and enjoy a calm background soundtrack while you play.</p>
+
+        <div class="level-grid">
+          <button class="level-btn selected" data-level="easy">Easy Mode<small>More time • Friendly questions • Great for casual players</small></button>
+          <button class="level-btn" data-level="medium">Medium Mode<small>Balanced pace • Mixed knowledge • Best overall experience</small></button>
+          <button class="level-btn" data-level="hard">Hard Mode<small>Less time • Faster challenge • For sharp players</small></button>
+        </div>
+
+        <div class="actions">
+          <button id="startBtn" class="main-btn">▶ Start Game</button>
+          <button id="soundBtn" class="secondary-btn">🔊 Sound & Music: ON</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="gameScreen" class="screen">
+      <div id="toast" class="toast">+1 Point</div>
+
+      <div class="game-head">
+        <div>
+          <div id="roundLabel" class="title-line">Question 1 / 10</div>
+          <div class="progress-wrap"><div id="progressBar" class="progress-bar"></div></div>
+        </div>
+        <div id="timerCard" class="timer-card">
+          <div class="timer-label">Time Left</div>
+          <div id="timerNum" class="timer-num">12</div>
+        </div>
+      </div>
+
+      <div class="question-card">
+        <div id="questionText" class="question-text">Question text</div>
+      </div>
+
+      <div id="optionsWrap" class="options"></div>
+
+      <div class="stats-row">
+        <div>⭐ Score: <span id="scoreText">0</span></div>
+        <div>🔥 Combo: <span id="comboText">0</span></div>
+        <div>🏆 Best: <span id="bestText">0</span></div>
+      </div>
+    </section>
+
+    <section id="resultScreen" class="screen">
+      <div class="result">
+        <div class="trophy">🏆</div>
+        <div id="resultTitle" class="badge">Great Job</div>
+        <div class="score-big"><span id="finalScore">0</span>/<span id="finalTotal">10</span></div>
+        <div class="pill-row">
+          <div class="pill">⏱ Level: <span id="finalLevel">Easy</span></div>
+          <div class="pill">🔥 Best Score: <span id="finalBest">0</span></div>
+          <div class="pill">⚡ Top Combo: <span id="finalCombo">0</span></div>
+        </div>
+        <p id="resultMessage">Ready for another round?</p>
+        <div class="actions">
+          <button id="playAgainBtn" class="main-btn">🔄 Play Again</button>
+          <button id="backHomeBtn" class="secondary-btn">🏠 Back to Home</button>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<script>
+const BANK = {
+  easy: [
+    {q:"What is the capital of France?",a:["Paris","Rome","Madrid","Berlin"],c:0},
+    {q:"Which planet is known as the Red Planet?",a:["Mars","Venus","Jupiter","Saturn"],c:0},
+    {q:"How many days are there in a week?",a:["5","6","7","8"],c:2},
+    {q:"Which animal is famous for barking?",a:["Cat","Dog","Rabbit","Horse"],c:1},
+    {q:"What color do you get when you mix blue and yellow?",a:["Green","Purple","Orange","Pink"],c:0},
+    {q:"Which ocean is the largest?",a:["Indian","Atlantic","Pacific","Arctic"],c:2},
+    {q:"What is 9 + 6?",a:["13","14","15","16"],c:2},
+    {q:"Which season comes after spring?",a:["Winter","Summer","Autumn","Monsoon"],c:1},
+    {q:"Which shape has three sides?",a:["Square","Circle","Triangle","Rectangle"],c:2},
+    {q:"Which food is made from milk?",a:["Cheese","Rice","Bread","Pasta"],c:0},
+    {q:"What is the opposite of cold?",a:["Cool","Warm","Dry","Soft"],c:1},
+    {q:"Which device is used to call someone?",a:["Phone","Toaster","Fan","Fridge"],c:0}
+  ],
+  medium: [
+    {q:"What is the largest mammal on Earth?",a:["Elephant","Giraffe","Blue whale","Hippo"],c:2},
+    {q:"Which country is famous for the pyramids of Giza?",a:["Mexico","Egypt","India","Peru"],c:1},
+    {q:"What is 12 × 8?",a:["84","96","108","88"],c:1},
+    {q:"Which gas do plants absorb from the air?",a:["Oxygen","Hydrogen","Carbon dioxide","Nitrogen"],c:2},
+    {q:"Which instrument has black and white keys?",a:["Violin","Piano","Flute","Drum"],c:1},
+    {q:"Who wrote Romeo and Juliet?",a:["Shakespeare","Hemingway","Tolstoy","Dickens"],c:0},
+    {q:"Which continent is the Sahara Desert in?",a:["Asia","Africa","Europe","Australia"],c:1},
+    {q:"What is the boiling point of water at sea level?",a:["90°C","95°C","100°C","110°C"],c:2},
+    {q:"Which language is mainly spoken in Brazil?",a:["Spanish","Portuguese","French","Italian"],c:1},
+    {q:"What does HTML stand for?",a:["Hyper Text Markup Language","High Text Machine Language","Hyper Tool Multi Language","Home Tool Markup Language"],c:0},
+    {q:"Which sport uses a racket and shuttlecock?",a:["Tennis","Badminton","Golf","Baseball"],c:1},
+    {q:"Which planet has the most visible rings?",a:["Earth","Mars","Saturn","Neptune"],c:2}
+  ],
+  hard: [
+    {q:"Which element has the chemical symbol Na?",a:["Nitrogen","Sodium","Neon","Nickel"],c:1},
+    {q:"In computing, what does CPU stand for?",a:["Central Process Unit","Central Processing Unit","Computer Primary Unit","Core Processing Utility"],c:1},
+    {q:"Which is the smallest prime number?",a:["0","1","2","3"],c:2},
+    {q:"Who painted the Mona Lisa?",a:["Picasso","Da Vinci","Monet","Van Gogh"],c:1},
+    {q:"Which country hosted the 2016 Summer Olympics?",a:["China","UK","Brazil","Japan"],c:2},
+    {q:"What is the hardest natural substance?",a:["Gold","Iron","Diamond","Silver"],c:2},
+    {q:"Which blood vessels carry blood back to the heart?",a:["Arteries","Veins","Nerves","Capillaries"],c:1},
+    {q:"Which planet is closest to the Sun?",a:["Mercury","Venus","Earth","Mars"],c:0},
+    {q:"What does WWW stand for?",a:["World Wide Web","Wide World Web","Web World Wide","World Web Window"],c:0},
+    {q:"How many players are on a standard soccer team on the field?",a:["9","10","11","12"],c:2},
+    {q:"Which country is both in Europe and Asia?",a:["Portugal","Turkey","Belgium","Ireland"],c:1},
+    {q:"Which organ pumps blood through the body?",a:["Liver","Brain","Heart","Lungs"],c:2}
+  ]
+};
+
+const LEVELS = {
+  easy:{name:"Easy",time:14,count:10},
+  medium:{name:"Medium",time:11,count:10},
+  hard:{name:"Hard",time:8,count:10}
+};
+
+const $ = s => document.querySelector(s);
+const $$ = s => document.querySelectorAll(s);
+
+const startScreen = $("#startScreen");
+const gameScreen = $("#gameScreen");
+const resultScreen = $("#resultScreen");
+const startBtn = $("#startBtn");
+const soundBtn = $("#soundBtn");
+const playAgainBtn = $("#playAgainBtn");
+const backHomeBtn = $("#backHomeBtn");
+const roundLabel = $("#roundLabel");
+const progressBar = $("#progressBar");
+const timerNum = $("#timerNum");
+const timerCard = $("#timerCard");
+const questionText = $("#questionText");
+const optionsWrap = $("#optionsWrap");
+const scoreText = $("#scoreText");
+const comboText = $("#comboText");
+const bestText = $("#bestText");
+const resultTitle = $("#resultTitle");
+const resultMessage = $("#resultMessage");
+const finalScore = $("#finalScore");
+const finalTotal = $("#finalTotal");
+const finalLevel = $("#finalLevel");
+const finalBest = $("#finalBest");
+const finalCombo = $("#finalCombo");
+const toast = $("#toast");
+
+let selectedLevel = "easy";
+let soundOn = true;
+let questions = [];
+let current = 0;
+let score = 0;
+let combo = 0;
+let bestCombo = 0;
+let timeLeft = 0;
+let timer = null;
+let answered = false;
+let audioCtx = null;
+let musicNodes = [];
+let musicTimeouts = [];
+let musicStarted = false;
+
+function shuffle(arr){
+  const a = [...arr];
+  for(let i = a.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function getBestScore(){ return Number(localStorage.getItem("smc_best") || 0); }
+function setBestScore(v){ localStorage.setItem("smc_best", String(v)); }
+
+function showScreen(screen){
+  [startScreen, gameScreen, resultScreen].forEach(s => s.classList.remove("active"));
+  screen.classList.add("active");
+}
+
+function initAudio(){
+  if(!audioCtx){
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if(Ctx) audioCtx = new Ctx();
+  }
+  if(audioCtx && audioCtx.state === "suspended") audioCtx.resume();
+}
+
+function playTone(freq = 440, duration = 0.12, type = "sine", volume = 0.08){
+  if(!soundOn) return;
+  initAudio();
+  if(!audioCtx) return;
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.type = type;
+  osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+  gain.gain.setValueAtTime(0.001, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(volume, audioCtx.currentTime + 0.01);
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+  osc.start();
+  osc.stop(audioCtx.currentTime + duration);
+}
+
+function soundTap(){ playTone(500, 0.08, "sine", 0.06); }
+function soundCorrect(){ playTone(720, 0.11, "triangle", 0.09); setTimeout(() => playTone(900, 0.09, "triangle", 0.07), 70); }
+function soundWrong(){ playTone(220, 0.18, "sawtooth", 0.08); }
+function soundTimeout(){ playTone(170, 0.22, "square", 0.08); }
+function soundStart(){ playTone(620, 0.10, "triangle", 0.08); setTimeout(() => playTone(760, 0.10, "triangle", 0.07), 60); }
+function soundWin(){ [660, 880, 1040].forEach((f, i) => setTimeout(() => playTone(f, 0.12, "triangle", 0.08), i * 80)); }
+
+function stopMusic(){
+  musicTimeouts.forEach(t => clearTimeout(t));
+  musicTimeouts = [];
+  musicNodes.forEach(node => {
+    try{ node.osc.stop(); }catch(e){}
+    try{ node.gain.disconnect(); }catch(e){}
+  });
+  musicNodes = [];
+  musicStarted = false;
+}
+
+function scheduleNote(startAt, freq, duration, volume, type="sine"){
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type = type;
+  osc.frequency.setValueAtTime(freq, startAt);
+  gain.gain.setValueAtTime(0.0001, startAt);
+  gain.gain.exponentialRampToValueAtTime(volume, startAt + 0.04);
+  gain.gain.exponentialRampToValueAtTime(0.0001, startAt + duration);
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.start(startAt);
+  osc.stop(startAt + duration + 0.02);
+  musicNodes.push({osc, gain});
+}
+
+function startCalmMusic(){
+  if(!soundOn) return;
+  initAudio();
+  if(!audioCtx || musicStarted) return;
+  musicStarted = true;
+
+  const melody = [392, 440, 523.25, 440, 392, 349.23, 392, 523.25];
+  const bass = [196, 220, 261.63, 220];
+  const patternLength = 8.0;
+  const now = audioCtx.currentTime + 0.08;
+
+  for(let loop = 0; loop < 24; loop++){
+    const baseTime = now + loop * patternLength;
+
+    melody.forEach((freq, i) => {
+      scheduleNote(baseTime + i * 0.9, freq, 0.55, 0.015, "sine");
+      scheduleNote(baseTime + i * 0.9, freq / 2, 0.50, 0.005, "triangle");
+    });
+
+    bass.forEach((freq, i) => {
+      scheduleNote(baseTime + i * 2.0, freq, 1.4, 0.009, "triangle");
+    });
+  }
+
+  musicTimeouts.push(setTimeout(() => {
+    musicStarted = false;
+    if(soundOn && (gameScreen.classList.contains("active") || startScreen.classList.contains("active"))){
+      startCalmMusic();
+    }
+  }, 24 * 8000));
+}
+
+function ensureMusic(){
+  if(soundOn){
+    startCalmMusic();
+  }else{
+    stopMusic();
+  }
+}
+
+function showToast(text){
+  toast.textContent = text;
+  toast.classList.add("show");
+  clearTimeout(showToast.t);
+  showToast.t = setTimeout(() => toast.classList.remove("show"), 750);
+}
+
+function buildGame(){
+  const level = LEVELS[selectedLevel];
+  questions = shuffle(BANK[selectedLevel]).slice(0, level.count);
+  current = 0;
+  score = 0;
+  combo = 0;
+  bestCombo = 0;
+  scoreText.textContent = score;
+  comboText.textContent = combo;
+  bestText.textContent = getBestScore();
+  showScreen(gameScreen);
+  ensureMusic();
+  loadQuestion();
+}
+
+function loadQuestion(){
+  answered = false;
+  if(current >= questions.length){
+    finishGame();
+    return;
+  }
+
+  const q = questions[current];
+  roundLabel.textContent = `Question ${current + 1} / ${questions.length}`;
+  progressBar.style.width = `${(current / questions.length) * 100}%`;
+  questionText.textContent = q.q;
+  optionsWrap.innerHTML = "";
+
+  q.a.forEach((ans, i) => {
+    const btn = document.createElement("button");
+    btn.className = "option-btn";
+    btn.textContent = ans;
+    btn.addEventListener("click", () => chooseAnswer(i, btn));
+    optionsWrap.appendChild(btn);
+  });
+
+  startTimer();
+}
+
+function startTimer(){
+  clearInterval(timer);
+  const level = LEVELS[selectedLevel];
+  timeLeft = level.time;
+  timerNum.textContent = timeLeft;
+  timerCard.classList.remove("warning");
+
+  timer = setInterval(() => {
+    timeLeft--;
+    timerNum.textContent = timeLeft;
+    if(timeLeft <= 3) timerCard.classList.add("warning");
+    if(timeLeft <= 0){
+      clearInterval(timer);
+      handleTimeout();
+    }
+  }, 1000);
+}
+
+function disableOptions(){ $$(".option-btn").forEach(btn => btn.disabled = true); }
+
+function revealAnswers(selectedIndex = null){
+  const correctIndex = questions[current].c;
+  $$(".option-btn").forEach((btn, idx) => {
+    if(idx === correctIndex) btn.classList.add("correct");
+    else if(idx === selectedIndex) btn.classList.add("wrong");
+  });
+}
+
+function chooseAnswer(index, btn){
+  if(answered) return;
+  answered = true;
+  clearInterval(timer);
+  disableOptions();
+
+  const correctIndex = questions[current].c;
+  if(index === correctIndex){
+    const bonus = combo >= 2 ? 2 : 1;
+    score += bonus;
+    combo += 1;
+    bestCombo = Math.max(bestCombo, combo);
+    scoreText.textContent = score;
+    comboText.textContent = combo;
+    btn.classList.add("correct");
+    soundCorrect();
+    showToast(bonus === 2 ? `⚡ Combo Bonus +${bonus}` : "+1 Point");
+  }else{
+    combo = 0;
+    comboText.textContent = combo;
+    revealAnswers(index);
+    soundWrong();
+    showToast("❌ Wrong Answer");
+  }
+
+  setTimeout(() => {
+    current++;
+    progressBar.style.width = `${(current / questions.length) * 100}%`;
+    loadQuestion();
+  }, 900);
+}
+
+function handleTimeout(){
+  if(answered) return;
+  answered = true;
+  combo = 0;
+  comboText.textContent = combo;
+  disableOptions();
+  revealAnswers(null);
+  soundTimeout();
+  showToast("⏰ Time's Up");
+
+  setTimeout(() => {
+    current++;
+    progressBar.style.width = `${(current / questions.length) * 100}%`;
+    loadQuestion();
+  }, 900);
+}
+
+function spawnConfetti(){
+  for(let i = 0; i < 38; i++){
+    const c = document.createElement("div");
+    c.className = "confetti";
+    c.style.left = Math.random() * 100 + "%";
+    c.style.background = ["#ff5f6d","#ffb703","#00c853","#2f9bff","#7c4dff"][Math.floor(Math.random()*5)];
+    c.style.animationDuration = (2.2 + Math.random() * 2.3) + "s";
+    c.style.transform = `translateY(0) rotate(${Math.random()*360}deg)`;
+    resultScreen.appendChild(c);
+    setTimeout(() => c.remove(), 5000);
+  }
+}
+
+function finishGame(){
+  clearInterval(timer);
+  const bestScore = Math.max(getBestScore(), score);
+  setBestScore(bestScore);
+
+  finalScore.textContent = score;
+  finalTotal.textContent = questions.length + Math.max(0, bestCombo - 2);
+  finalLevel.textContent = LEVELS[selectedLevel].name;
+  finalBest.textContent = bestScore;
+  finalCombo.textContent = bestCombo;
+  bestText.textContent = bestScore;
+
+  if(score >= 11){
+    resultTitle.textContent = "Amazing!";
+    resultMessage.textContent = "You played brilliantly. Fast thinking, strong combo, and a top-tier result.";
+    soundWin();
+    spawnConfetti();
+  }else if(score >= 7){
+    resultTitle.textContent = "Great Job";
+    resultMessage.textContent = "Nice performance. You're getting sharper every round. Try again and beat your best score.";
+    soundWin();
+  }else{
+    resultTitle.textContent = "Keep Going";
+    resultMessage.textContent = "Good start. Play again, build longer combos, and improve your score.";
+    soundTap();
+  }
+
+  progressBar.style.width = "100%";
+  showScreen(resultScreen);
+}
+
+$$(".level-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    $$(".level-btn").forEach(b => b.classList.remove("selected"));
+    btn.classList.add("selected");
+    selectedLevel = btn.dataset.level;
+    soundTap();
+  });
+});
+
+soundBtn.addEventListener("click", () => {
+  soundOn = !soundOn;
+  soundBtn.textContent = soundOn ? "🔊 Sound & Music: ON" : "🔈 Sound & Music: OFF";
+  if(soundOn){
+    initAudio();
+    soundTap();
+    ensureMusic();
+  }else{
+    stopMusic();
+  }
+});
+
+startBtn.addEventListener("click", async () => {
+  initAudio();
+  ensureMusic();
+  soundStart();
+  buildGame();
+});
+
+playAgainBtn.addEventListener("click", () => {
+  initAudio();
+  ensureMusic();
+  soundStart();
+  buildGame();
+});
+
+backHomeBtn.addEventListener("click", () => {
+  soundTap();
+  bestText.textContent = getBestScore();
+  showScreen(startScreen);
+  ensureMusic();
+});
+
+document.addEventListener("visibilitychange", () => {
+  if(document.hidden){
+    clearInterval(timer);
+    stopMusic();
+  }else{
+    if(soundOn){
+      ensureMusic();
+    }
+    if(gameScreen.classList.contains("active") && !answered){
+      startTimer();
+    }
+  }
+});
+
+bestText.textContent = getBestScore();
+</script>
+</body>
+</html>
